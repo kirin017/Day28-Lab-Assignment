@@ -1,6 +1,3 @@
-# docker-compose.yml
-version: "3.9"
-
 services:
   # ── Kafka Stack ──────────────────────────────────────────
   zookeeper:
@@ -18,13 +15,17 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   # ── Prefect ───────────────────────────────────────────────
   prefect-orion:
     image: prefecthq/prefect:2.14.0-python3.10
-    command: prefect orion start --host 0.0.0.0
+    command: prefect server start --host 0.0.0.0
     ports:
       - "4200:4200"
     volumes:
@@ -32,9 +33,13 @@ services:
 
   prefect-worker:
     image: prefecthq/prefect:2.14.0-python3.10
-    command: prefect worker start -p docker -n lab28-worker
+    command: >
+      sh -c "pip install -r /opt/prefect/flows/requirements.txt &&
+             python /opt/prefect/flows/kafka_to_delta.py"
     environment:
       PREFECT_API_URL: http://prefect-orion:4200/api
+      PREFECT_SERVE: "1"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     volumes:
       - ./prefect/flows:/opt/prefect/flows
       - ./delta-lake:/opt/delta-lake
@@ -70,6 +75,9 @@ services:
       - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
 
   # ── API Gateway ───────────────────────────────────────────
   api-gateway:
@@ -78,6 +86,7 @@ services:
       - "8000:8000"
     environment:
       VLLM_URL: ${VLLM_NGROK_URL}
+      VLLM_TIMEOUT_SECONDS: ${VLLM_TIMEOUT_SECONDS:-1.85}
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis://redis:6379
     depends_on: [qdrant, redis]

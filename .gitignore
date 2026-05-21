@@ -220,3 +220,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 ANSWERS.md
+
+# Lab 28 generated runtime artifacts
+delta-lake/
+screenshots/*.html
+screenshots/*.txt

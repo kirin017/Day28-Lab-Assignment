@@ -1,10 +1,10 @@
 # scripts/01_ingest_to_kafka.py
 from kafka import KafkaProducer
-import json, time
+import json, os, time
 
 producer = KafkaProducer(
-    bootstrap_servers="localhost:9092",
-    value_serializer=lambda v: json.dumps(v).encode()
+    bootstrap_servers=os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
 def ingest_data(records: list[dict]):

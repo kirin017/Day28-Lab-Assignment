@@ -7,10 +7,6 @@ scrape_configs:
     static_configs:
       - targets: ["api-gateway:8000"]
 
-  - job_name: "kafka"
+  - job_name: "qdrant"
     static_configs:
-      - targets: ["kafka:9092"]
-
-  - job_name: "prefect-orion"
-    static_configs:
-      - targets: ["prefect-orion:4200"]
+      - targets: ["qdrant:6333"]
